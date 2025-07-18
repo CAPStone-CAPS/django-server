@@ -139,3 +139,7 @@ CSRF_TRUSTED_ORIGINS = [
     # 실 배포 주소로 교체 예정
     "http://yunseok-minipc:9090",
 ]
+
+NINJA_SETTINGS = {
+    "SWAGGER_UI_DIST": "https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.15.5",
+}
