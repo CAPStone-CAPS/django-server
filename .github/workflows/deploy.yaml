@@ -58,7 +58,7 @@ jobs:
 
       - name: Copy docker-compose and .env to server via SCP
         run: |
-          scp -o StrictHostKeyChecking=no -P ${{ secrets.DEV_PORT }} docker-compose.yml .env ${{ secrets.DEV_USERNAME }}@${{ secrets.DEV_HOST }}:~/deploy/
+          scp -o StrictHostKeyChecking=no -P ${{ secrets.DEV_PORT }} docker-compose.yml .env nginx/default.conf ${{ secrets.DEV_USERNAME }}@${{ secrets.DEV_HOST }}:~/deploy/
 
       - name: SSH and Deploy
         run: |
