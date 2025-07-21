@@ -4,7 +4,6 @@ services:
     env_file:
       - .env
     volumes:
-      - .:/app
       - db-data:/app/data
       - static-data:/app/staticfiles
     ports:
