@@ -1,0 +1,65 @@
+name: Full Deploy with Docker Compose
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to NCP Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.NCP_CONTAINER_REGISTRY }}
+          username: ${{ secrets.NCP_ACCESS_KEY }}
+          password: ${{ secrets.NCP_SECRET_KEY }}
+
+      - name: Build and Push Image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.NCP_CONTAINER_REGISTRY }}/backend:latest
+            ${{ secrets.NCP_CONTAINER_REGISTRY }}/backend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.NCP_CONTAINER_REGISTRY }}/backend:latest
+          cache-to: type=inline
+
+      - name: Create .env file
+        run: |
+          echo "DJANGO_SECRET_KEY=${{ secrets.ENV_DJANGO_SECRET_KEY }}" >> .env
+          echo "DJANGO_SETTINGS_MODULE=${{ secrets.ENV_DJANGO_SETTINGS_MODULE }}" >> .env
+          echo "ALLOWED_HOSTS=${{ secrets.ENV_ALLOWED_HOSTS }}" >> .env
+          echo "DJANGO_SUPERUSER_USERNAME=${{ secrets.ENV_DJANGO_SUPERUSER_USERNAME }}" >> .env
+          echo "DJANGO_SUPERUSER_EMAIL=${{ secrets.ENV_DJANGO_SUPERUSER_EMAIL }}" >> .env
+          echo "DJANGO_SUPERUSER_PASSWORD=${{ secrets.ENV_DJANGO_SUPERUSER_PASSWORD }}" >> .env
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEV_SSH_KEY }}
+
+      - name: Copy docker-compose and .env to server via SCP
+        run: |
+          scp -o StrictHostKeyChecking=no -P ${{ secrets.DEV_PORT }} docker-compose.yml .env ${{ secrets.DEV_USERNAME }}@${{ secrets.DEV_HOST }}:~/deploy/
+
+      - name: SSH and Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.DEV_PORT }} ${{ secrets.DEV_USERNAME }}@${{ secrets.DEV_HOST }} << 'EOF'
+            cd ~/deploy
+            docker login ${{ secrets.NCP_CONTAINER_REGISTRY }} -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }}
+            docker compose pull
+            docker compose down
+            docker compose up -d --remove-orphans
+            docker image prune -f --filter "until=24h"
+          EOF

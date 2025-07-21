@@ -25,11 +25,9 @@ cd django-server
 
 2. 가상환경 + 패키지 설치
 ```bash
-uv venv
+uv sync
 .venv\Scripts\activate           # Windows
 # source .venv/bin/activate     # macOS/Linux
-
-uv pip install -r requirements.txt
 ```
 
 ## 📘 API 문서 자동 생성
