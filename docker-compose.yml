@@ -1,6 +1,6 @@
 services:
   web:
-    build: .
+    image: yunseok-docker.kr.ncr.ntruss.com/backend:latest
     env_file:
       - .env
     volumes:
