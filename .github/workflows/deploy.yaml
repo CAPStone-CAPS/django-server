@@ -30,9 +30,9 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ${{ secrets.NCP_CONTAINER_REGISTRY }}/prv-backend:latest
-            ${{ secrets.NCP_CONTAINER_REGISTRY }}/prv-backend:${{ github.sha }}
-          cache-from: type=registry,ref=${{ secrets.NCP_CONTAINER_REGISTRY }}/prv-backend:latest
+            ${{ secrets.NCP_CONTAINER_REGISTRY }}/backend:latest
+            ${{ secrets.NCP_CONTAINER_REGISTRY }}/backend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.NCP_CONTAINER_REGISTRY }}/backend:latest
           cache-to: type=inline
 
       - name: Create .env file
@@ -44,26 +44,22 @@ jobs:
           echo "DJANGO_SUPERUSER_EMAIL=${{ secrets.ENV_DJANGO_SUPERUSER_EMAIL }}" >> .env
           echo "DJANGO_SUPERUSER_PASSWORD=${{ secrets.ENV_DJANGO_SUPERUSER_PASSWORD }}" >> .env
 
-      - name: Copy docker-compose and .env to server
-        uses: appleboy/scp-action@master
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.DEV_HOST }}
-          username: ${{ secrets.DEV_USERNAME }}
-          password: ${{ secrets.DEV_PASSWORD }}
-          port: ${{ secrets.DEV_PORT }}
-          source: "docker-compose.yml,.env"
-          target: "~/deploy"
+          ssh-private-key: ${{ secrets.DEV_SSH_KEY }}
+
+      - name: Copy docker-compose and .env to server via SCP
+        run: |
+          scp -o StrictHostKeyChecking=no -P ${{ secrets.DEV_PORT }} docker-compose.yml .env ${{ secrets.DEV_USERNAME }}@${{ secrets.DEV_HOST }}:~/deploy/
 
       - name: SSH and Deploy
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.DEV_HOST }}
-          username: ${{ secrets.DEV_USERNAME }}
-          password: ${{ secrets.DEV_PASSWORD }}
-          port: ${{ secrets.DEV_PORT }}
-          script: |
+        run: |
+          ssh -o StrictHostKeyChecking=no -p ${{ secrets.DEV_PORT }} ${{ secrets.DEV_USERNAME }}@${{ secrets.DEV_HOST }} << 'EOF'
             cd ~/deploy
             docker login ${{ secrets.NCP_CONTAINER_REGISTRY }} -u ${{ secrets.NCP_ACCESS_KEY }} -p ${{ secrets.NCP_SECRET_KEY }}
-            docker-compose pull
-            docker-compose up -d
+            docker compose pull
+            docker compose down
+            docker compose up -d --remove-orphans
             docker image prune -f --filter "until=24h"
+          EOF
