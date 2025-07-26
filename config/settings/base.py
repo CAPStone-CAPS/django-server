@@ -37,6 +37,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'ninja',
     'apps.api',
+    'apps.group',
     
     'django.contrib.admin',
     'django.contrib.auth',
