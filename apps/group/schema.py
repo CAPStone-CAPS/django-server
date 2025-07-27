@@ -20,17 +20,13 @@ class GroupCreateRequestSchema(Schema):
 
 
 class GroupUpdateRequestSchema(Schema):
-    group_name: Optional[str]
-    description: Optional[str]
+    group_name: Optional[str] = None
+    description: Optional[str] = None
 
 
 class GroupListResponseSchema(Schema):
     groups: List[GroupSchema]
 
-
-# 이 기능은 User 제작 이후 제작할 예정
-class GroupMemberUpdateRequestSchema(Schema):
-    pass
 
 class UserSchema(Schema):
     id: int

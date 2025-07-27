@@ -1,66 +1,90 @@
 from ninja import Router
-from ninja.errors import HttpError
-
+from ninja.responses import Response
 from django.http import HttpRequest
 from django.utils import timezone
 
 from ..models import GroupInfo, UserGroupMembership
+from apps.api.schema import ResponseSchema
 from ..schema import (
-    GroupSchema, 
-    GroupCreateRequestSchema, 
-    GroupListResponseSchema, 
+    GroupSchema,
+    GroupCreateRequestSchema,
+    GroupListResponseSchema,
     GroupUpdateRequestSchema
 )
-
 
 router = Router(tags=["Group"])
 
 
-@router.get("", response=GroupListResponseSchema)
+@router.get("", response=ResponseSchema[GroupListResponseSchema])
 def get_user_groups(request: HttpRequest):
     if not request.user.is_authenticated:
-        raise HttpError(401, "Unauthorized")
+        return Response(
+            {"message": "Unauthorized", "data": None},
+            status=401
+        )
 
     memberships = UserGroupMembership.objects.filter(user=request.user).select_related('group')
     groups = [membership.group for membership in memberships]
 
-    return 200, {"groups": groups}
+    return Response(
+        {
+            "message": "Group list fetched",
+            "data": {
+                "groups": [GroupSchema.from_orm(group) for group in groups]
+            }
+        },
+        status=200
+    )
 
 
-@router.post("", response=GroupSchema)
+@router.post("", response=ResponseSchema[GroupSchema])
 def create_group(request: HttpRequest, payload: GroupCreateRequestSchema):
     if not request.user.is_authenticated:
-        raise HttpError(401, "Unauthorized")
-    
-    group = GroupInfo(
+        return Response(
+            {"message": "Unauthorized", "data": None},
+            status=401
+        )
+
+    group = GroupInfo.objects.create(
         group_name=payload.group_name,
         description=payload.description,
         create_date=timezone.now(),
         modify_date=None
     )
-    group.save()
 
-    # 새 그룹에 만든 유저를 멤버로 자동 등록
     UserGroupMembership.objects.create(user=request.user, group=group)
 
-    return group
+    return Response(
+        {
+            "message": "Group created",
+            "data": GroupSchema.from_orm(group)
+        },
+        status=201
+    )
 
 
-@router.patch("/{group_id}", response=GroupSchema)
+@router.patch("/{group_id}", response=ResponseSchema[GroupSchema])
 def edit_group(request: HttpRequest, group_id: int, payload: GroupUpdateRequestSchema):
     if not request.user.is_authenticated:
-        raise HttpError(401, "Unauthorized")
+        return Response(
+            {"message": "Unauthorized", "data": None},
+            status=401
+        )
 
-    # 요청한 그룹이 로그인한 유저가 가입한 그룹인지 확인
     if not UserGroupMembership.objects.filter(user=request.user, group_id=group_id).exists():
-        raise HttpError(403, "Forbidden: You are not a member of this group")
+        return Response(
+            {"message": "Forbidden: You are not a member of this group", "data": None},
+            status=403
+        )
 
     try:
         group = GroupInfo.objects.get(id=group_id)
     except GroupInfo.DoesNotExist:
-        raise HttpError(404, "Group not found")
+        return Response(
+            {"message": "Group not found", "data": None},
+            status=404
+        )
 
-    # 부분 업데이트: payload에 있는 필드만 업데이트
     updated = False
     if payload.group_name is not None:
         group.group_name = payload.group_name
@@ -68,9 +92,15 @@ def edit_group(request: HttpRequest, group_id: int, payload: GroupUpdateRequestS
     if payload.description is not None:
         group.description = payload.description
         updated = True
-    
+
     if updated:
         group.modify_date = timezone.now()
         group.save()
 
-    return group
+    return Response(
+        {
+            "message": "Group updated",
+            "data": GroupSchema.from_orm(group)
+        },
+        status=200
+    )
