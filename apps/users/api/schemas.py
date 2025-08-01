@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, Generic, TypeVar
+from ninja import Schema
 
 T = TypeVar("T")
 
@@ -24,3 +25,10 @@ class LoginSchema(BaseModel):
 class UpdateUserSchema(BaseModel):
     username: Optional[str] = Field(None, example="newusername")
     password: Optional[str] = Field(None, example="newpassword")
+
+class SignupResponse(Schema):
+    username: str
+
+class TokenResponse(Schema):
+    accessToken: str
+    refresh: str

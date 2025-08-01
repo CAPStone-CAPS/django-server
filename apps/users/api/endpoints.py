@@ -6,12 +6,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.api.schema import ResponseSchema
 from apps.api.auth import JWTAuth
-from .schemas import SignupSchema, LoginSchema, UpdateUserSchema
+from .schemas import SignupSchema, LoginSchema, UpdateUserSchema, UserResponse, SignupResponse, TokenResponse
 
 router = Router(tags=["Login"])
 
 
-@router.post("/signup", response=ResponseSchema[dict])
+@router.post("/signup", response=ResponseSchema[SignupResponse])
 def signup(request, data: SignupSchema):
     if User.objects.filter(username=data.username).exists():
         return Response(
@@ -25,7 +25,7 @@ def signup(request, data: SignupSchema):
     )
 
 
-@router.post("/login", response=ResponseSchema[dict])
+@router.post("/login", response=ResponseSchema[TokenResponse])
 def login(request, data: LoginSchema):
     user = authenticate(username=data.username, password=data.password)
     if user is None:
@@ -47,7 +47,7 @@ def login(request, data: LoginSchema):
     )
 
 
-@router.get("/me", auth=JWTAuth(), response=ResponseSchema[dict])
+@router.get("/me", auth=JWTAuth(), response=ResponseSchema[UserResponse])
 def me(request):
     return Response(
         {
@@ -61,7 +61,7 @@ def me(request):
     )
 
 
-@router.patch("/me", auth=JWTAuth(), response=ResponseSchema[dict])
+@router.patch("/me", auth=JWTAuth(), response=ResponseSchema[UserResponse])
 def update_user(request, data: UpdateUserSchema):
     user = request.user
 
