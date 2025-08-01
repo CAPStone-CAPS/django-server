@@ -1,4 +1,5 @@
 from ninja import Router
+from ninja.errors import HttpError
 from ninja.responses import Response
 from django.http import HttpRequest
 from django.utils import timezone
@@ -6,11 +7,8 @@ from django.utils import timezone
 from .models import AIDailySummary
 from apps.api.schema import ResponseSchema
 from .schema import AISummary
+from .services.gemini_service import generate_summary
 
-
-# Gemini 호출 (추후 구현)
-def generate_summary_for_user(user):
-    pass
 
 router = Router(tags=["AI 요약"])
 
@@ -20,24 +18,30 @@ router = Router(tags=["AI 요약"])
     description="오늘자 요약이 있으면 제공, 없으면 생성 후 제공합니다.",
     response=ResponseSchema[AISummary]
 )
-def get_ai_summary(request: HttpRequest):
+def get_ai_summary(request: HttpRequest) -> Response:
     user = request.user
     if not user.is_authenticated:
-        return Response(status=401, data={"message": "로그인이 필요합니다."})
+        return HttpError(
+            status=401,
+            data={"message": "로그인이 필요합니다."}
+        )
 
     today = timezone.now().date()
-    summary, created = AIDailySummary.objects.get_or_create(
-        user=user,
-        date=today,
-        defaults={
-            "message": generate_summary_for_user(user)  # Gemini 호출 (추후 구현)
-        }
-    )
+    summary = AIDailySummary.objects.filter(user=user, date=today).first()
 
-    return ResponseSchema[AISummary](
-        message="성공",
-        data=AISummary(
-            message=summary.message,
-            date=str(summary.date)
+    if not summary:
+        # 여기에 시간 데이터 DB에서 가져오는 로직 넣어보기
+        generated = generate_summary()
+        summary = AIDailySummary.objects.create(
+            user=user,
+            date=today,
+            message=generated
+        )
+        summary.save()
+
+    return Response(
+        ResponseSchema[str](
+            message="성공",
+            data=summary.message,
         )
     )

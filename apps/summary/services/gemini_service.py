@@ -59,21 +59,13 @@ prompt = f"""
 """
 
 
-response = client.models.generate_content(
-    model="gemini-2.5-flash",
-    contents=prompt,
-    config=types.GenerateContentConfig(
-        thinking_config=types.ThinkingConfig(thinking_budget=0)
-    ),
-)
-
 def extract_json(text: str) -> dict:
     # ```json ... ``` 또는 ``` ... ``` 안의 JSON만 추출
     match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if match:
         json_text = match.group(1)
     else:
-        json_text = text.strip()  # fallback: 전체를 그대로 사용
+        json_text = text.strip() 
 
     try:
         return json.loads(json_text)
@@ -83,4 +75,14 @@ def extract_json(text: str) -> dict:
         print("원본 응답:", text)
         return None
     
-print(extract_json(response.text))
+
+def generate_summary() -> str: 
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0)
+        ),
+    )
+    data = extract_json(response.text)
+    return data["summary"] + " " + data["feedback"]
