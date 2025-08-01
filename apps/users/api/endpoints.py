@@ -3,25 +3,12 @@ from ninja.responses import Response
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from ninja.security import HttpBearer
-from django.http import HttpRequest
 
 from apps.api.schema import ResponseSchema
+from apps.api.auth import JWTAuth
 from .schemas import SignupSchema, LoginSchema, UpdateUserSchema
 
 router = Router(tags=["Login"])
-
-
-class JWTAuth(HttpBearer):
-    def authenticate(self, request: HttpRequest, token: str):
-        try:
-            validated_token = JWTAuthentication().get_validated_token(token.encode())
-            user = JWTAuthentication().get_user(validated_token)
-            request.user = user
-            return user
-        except Exception:
-            return None
 
 
 @router.post("/signup", response=ResponseSchema[dict])
