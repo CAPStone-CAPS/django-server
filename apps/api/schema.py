@@ -13,15 +13,15 @@ class ResponseSchema(GenericModel, Generic[T]):
 
 
 class UnauthorizedSchema(Schema):
-    message: Literal["Unauthorized"]
+    message: str = "Unauthorized"
     data: Optional[None] = None
- 
+    
     
 class ForbiddenSchema(Schema):
-    message: Literal["Forbidden"]
+    message: str = "Forbidden"
     data: Optional[None] = None
 
 
 class NotFoundSchema(Schema):
-    message: Literal["Group not found"]
+    message: str = "Group not found"
     data: Optional[None] = None

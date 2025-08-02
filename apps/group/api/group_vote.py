@@ -14,9 +14,11 @@ from apps.api.schema import (
     NotFoundSchema
 )
 from ..schema import (
+    UserSchema,
     MVPVoteCandidateItem,
     MVPVoteInfoResponse,
     MVPVoteRequest,
+    MVPResultItem,
     MVPResultResponse,
     MVPVoteHistoryResponse
 )
@@ -31,6 +33,12 @@ router = Router(tags=["Group Vote"], auth=JWTAuth())
     403: ForbiddenSchema,
 })
 def get_vote_info(request: HttpRequest, group_id: int):
+    """
+    해당 그룹의 투표 정보를 조회합니다.
+
+    - 오늘 투표 여부 반환
+    - 투표 후보 리스트(멤버 및 요약 포함) 반환
+    """
     user = request.user
     today = timezone.now().date()
 
@@ -100,6 +108,7 @@ def vote_mvp(request: HttpRequest, group_id: int, data: MVPVoteRequest):
     )
     return ResponseSchema(message="투표가 완료되었습니다.", data=None)
 
+
 @router.get("/{group_id}/vote/result", response={
     200: ResponseSchema[MVPResultResponse],
     401: UnauthorizedSchema,
@@ -112,18 +121,35 @@ def get_vote_result(request: HttpRequest, group_id: int):
     if not UserGroupMembership.objects.filter(group_id=group_id, user=user).exists():
         return 403, ForbiddenSchema(message="해당 그룹의 멤버가 아닙니다.", data=None)
 
+    # 투표 집계
     votes = MVPVote.objects.filter(group_id=group_id, vote_date=today)
-    result_dict = {}
-
+    vote_count_map = {}
     for vote in votes:
-        result_dict.setdefault(vote.target_id, 0)
-        result_dict[vote.target_id] += 1
+        vote_count_map[vote.target_id] = vote_count_map.get(vote.target_id, 0) + 1
 
-    user_cache = {v.target.id: v.target for v in votes.select_related("target")}
+    # 그룹 멤버 전체
+    memberships = UserGroupMembership.objects.select_related("user").filter(group_id=group_id)
+    user_ids = [m.user.id for m in memberships]
+    user_map = {m.user.id: m.user for m in memberships}
+
+    # 요약
+    summaries = AIDailySummary.objects.filter(user_id__in=user_ids, date=today)
+    summary_map = {s.user_id: s.summary for s in summaries}
+
+    # 결과 조립
     results = [
-        {"user": user_cache[uid], "vote_count": count}
-        for uid, count in sorted(result_dict.items(), key=lambda x: x[1], reverse=True)
+        MVPResultItem(
+            candidate=MVPVoteCandidateItem(
+                user=user_map[uid],
+                summary=summary_map.get(uid, "요약이 없습니다.")
+            ),
+            vote_count=vote_count_map.get(uid, 0)
+        )
+        for uid in user_ids
     ]
+
+    # 투표 수 기준 정렬
+    results.sort(key=lambda x: x.vote_count, reverse=True)
 
     return ResponseSchema(
         message="투표 결과입니다.",
