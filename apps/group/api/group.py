@@ -11,8 +11,10 @@ from ..schema import (
     GroupListResponseSchema,
     GroupUpdateRequestSchema
 )
+from apps.api.auth import JWTAuth
 
-router = Router(tags=["Group"])
+
+router = Router(tags=["Group"], auth=JWTAuth())
 
 
 @router.get("", response=ResponseSchema[GroupListResponseSchema])
@@ -37,7 +39,7 @@ def get_user_groups(request: HttpRequest):
     )
 
 
-@router.post("", response=ResponseSchema[GroupSchema])
+@router.post(path="", response=ResponseSchema[GroupSchema])
 def create_group(request: HttpRequest, payload: GroupCreateRequestSchema):
     if not request.user.is_authenticated:
         return Response(

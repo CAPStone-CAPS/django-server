@@ -7,9 +7,10 @@ from django.http import HttpRequest
 from ..models import GroupInfo, UserGroupMembership
 from apps.api.schema import ResponseSchema
 from ..schema import UserSchema, MemberListResponseSchema
+from apps.api.auth import JWTAuth
 
 
-router = Router(tags=["Group Member"])
+router = Router(tags=["Group Member"], auth=JWTAuth())
 
 
 # 그룹 멤버 리스트 조회
