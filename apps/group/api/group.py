@@ -4,7 +4,12 @@ from django.http import HttpRequest
 from django.utils import timezone
 
 from ..models import GroupInfo, UserGroupMembership
-from apps.api.schema import ResponseSchema
+from apps.api.schema import (
+    ResponseSchema,
+    UnauthorizedSchema,
+    ForbiddenSchema,
+    NotFoundSchema
+)
 from ..schema import (
     GroupSchema,
     GroupCreateRequestSchema,
@@ -17,7 +22,10 @@ from apps.api.auth import JWTAuth
 router = Router(tags=["Group"], auth=JWTAuth())
 
 
-@router.get("", response=ResponseSchema[GroupListResponseSchema])
+@router.get("", response={
+    200: ResponseSchema[GroupListResponseSchema],
+    401: UnauthorizedSchema,
+})
 def get_user_groups(request: HttpRequest):
     if not request.user.is_authenticated:
         return Response(
@@ -39,7 +47,10 @@ def get_user_groups(request: HttpRequest):
     )
 
 
-@router.post(path="", response=ResponseSchema[GroupSchema])
+@router.post(path="", response={
+    201: ResponseSchema[GroupSchema],
+    401: UnauthorizedSchema,
+})
 def create_group(request: HttpRequest, payload: GroupCreateRequestSchema):
     if not request.user.is_authenticated:
         return Response(
@@ -65,27 +76,23 @@ def create_group(request: HttpRequest, payload: GroupCreateRequestSchema):
     )
 
 
-@router.patch("/{group_id}", response=ResponseSchema[GroupSchema])
+@router.patch("/{group_id}", response={
+    200: ResponseSchema[GroupSchema],
+    401: UnauthorizedSchema,
+    403: ForbiddenSchema,
+    404: NotFoundSchema
+})
 def edit_group(request: HttpRequest, group_id: int, payload: GroupUpdateRequestSchema):
     if not request.user.is_authenticated:
-        return Response(
-            {"message": "Unauthorized", "data": None},
-            status=401
-        )
+        return Response({"message": "Unauthorized", "data": None}, status=401)
 
     if not UserGroupMembership.objects.filter(user=request.user, group_id=group_id).exists():
-        return Response(
-            {"message": "Forbidden: You are not a member of this group", "data": None},
-            status=403
-        )
+        return Response({"message": "Forbidden", "data": None}, status=403)
 
     try:
         group = GroupInfo.objects.get(id=group_id)
     except GroupInfo.DoesNotExist:
-        return Response(
-            {"message": "Group not found", "data": None},
-            status=404
-        )
+        return Response({"message": "Group not found", "data": None}, status=404)
 
     updated = False
     if payload.group_name is not None:
