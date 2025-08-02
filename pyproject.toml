@@ -8,6 +8,8 @@ dependencies = [
     "django>=5.2.4",
     "django-ninja>=1.4.3",
     "google-genai>=1.28.0",
+    "djangorestframework>=3.16.0",
+    "djangorestframework-simplejwt>=5.5.1",
     "python-dotenv>=1.1.1",
     "uvicorn>=0.35.0",
 ]
