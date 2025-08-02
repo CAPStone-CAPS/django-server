@@ -35,7 +35,11 @@ class UserSchema(Schema):
     class Config:
         orm_mode = True
 
+class MemberInfoSchema(Schema):
+    user: UserSchema
+    summary: Optional[str]
+
 class MemberListResponseSchema(Schema):
-    members: List[UserSchema]
+    members: List[MemberInfoSchema]
     
     

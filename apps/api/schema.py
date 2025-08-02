@@ -23,5 +23,5 @@ class ForbiddenSchema(Schema):
 
 
 class NotFoundSchema(Schema):
-    message: str = "Group not found"
+    message: str = "Not found"
     data: Optional[None] = None

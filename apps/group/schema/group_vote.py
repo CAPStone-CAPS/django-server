@@ -3,16 +3,16 @@ from typing import Optional, List
 from datetime import date
 from pydantic import Field
 
-from .group import UserSchema
+from .group import UserSchema, MemberInfoSchema
 
 
-class MVPVoteCandidateItem(Schema):
+class MemberInfoSchema(Schema):
     user: UserSchema
     summary: Optional[str]
 
 class MVPVoteInfoResponse(Schema):
     today_voted: bool
-    candidates: List[MVPVoteCandidateItem]
+    candidates: List[MemberInfoSchema]
     
 
 class MVPVoteRequest(Schema):
@@ -20,7 +20,7 @@ class MVPVoteRequest(Schema):
    
     
 class MVPResultItem(Schema):
-    candidate: MVPVoteCandidateItem
+    candidate: MemberInfoSchema
     vote_count: int
 
 

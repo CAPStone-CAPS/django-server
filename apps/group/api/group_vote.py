@@ -14,8 +14,7 @@ from apps.api.schema import (
     NotFoundSchema
 )
 from ..schema import (
-    UserSchema,
-    MVPVoteCandidateItem,
+    MemberInfoSchema,
     MVPVoteInfoResponse,
     MVPVoteRequest,
     MVPResultItem,
@@ -60,7 +59,7 @@ def get_vote_info(request: HttpRequest, group_id: int):
     }
 
     candidates = [
-        MVPVoteCandidateItem(
+        MemberInfoSchema(
             user=m.user,
             summary=summary_map.get(m.user.id) or "요약이 없습니다."
         )
@@ -139,7 +138,7 @@ def get_vote_result(request: HttpRequest, group_id: int):
     # 결과 조립
     results = [
         MVPResultItem(
-            candidate=MVPVoteCandidateItem(
+            candidate=MemberInfoSchema(
                 user=user_map[uid],
                 summary=summary_map.get(uid, "요약이 없습니다.")
             ),
