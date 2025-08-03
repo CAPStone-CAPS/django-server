@@ -49,21 +49,21 @@ def record_usage(request, data: UsageRecordCreateSchema):
             end_time=data.end_time,
         )
 
-        return 200, ResponseSchema(
-            message="사용시간 기록 성공",
-            data=None
+        return Response(
+            {"message": "사용시간 기록 성공", "data": None},
+            status=200
         )
 
     except IntegrityError as e:
-        return 500, ResponseSchema(
-            message=f"앱 정보 저장 실패: {e}",
-            data=None
+        return Response(
+            {"message": f"앱 정보 저장 실패: {e}", "data": None},
+            status=500
         )
 
     except Exception as e:
-        return 500, ResponseSchema(
-            message=f"기록 저장 실패: {e}",
-            data=None
+        return Response(
+            {"message": f"기록 저장 실패: {e}", "data": None},
+            status=500
         )
 
 
@@ -93,7 +93,10 @@ def list_usage(request):
         )
         result.append(record)
 
-    return 200, ResponseSchema(
-        message="사용시간 리스트 조회 성공",
-        data={"records": result}
+    return Response(
+        {
+            "message": "사용시간 리스트 조회 성공",
+            "data": {"records": result}
+        },
+        status=200
     )
