@@ -38,8 +38,9 @@ INSTALLED_APPS = [
     'ninja',
     'apps.api',
     'apps.group',
+    'apps.usage',
     'apps.summary',
-    
+  
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',

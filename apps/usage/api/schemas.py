@@ -1,0 +1,26 @@
+from pydantic import BaseModel, Field
+from typing import List, Optional
+
+class UsageRecordCreateSchema(BaseModel):
+    package_name: str = Field(..., example="com.example.capstone_2")
+    app_name: str = Field(..., example="capstone_2")
+    usage_time_ms: int = Field(..., example=62163)
+    start_time: int = Field(..., example=1753874134830)
+    end_time: int = Field(..., example=1753888371658)
+
+class UsageRecordSchema(BaseModel):
+    package_name: str
+    app_name: str
+    usage_time_ms: int
+    start_time: int
+    end_time: int
+    start_time_str: Optional[str] = None
+    end_time_str: Optional[str] = None
+    usage_time_str: Optional[str] = None
+
+class UsageListResponseSchema(BaseModel):
+    records: List[UsageRecordSchema]
+
+class SimpleResponseSchema(BaseModel):
+    message: str
+    data: Optional[dict] = None
