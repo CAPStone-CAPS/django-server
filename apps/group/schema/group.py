@@ -31,10 +31,15 @@ class GroupListResponseSchema(Schema):
 class UserSchema(Schema):
     id: int
     username: str
-    email: str
 
     class Config:
         orm_mode = True
 
+class MemberInfoSchema(Schema):
+    user: UserSchema
+    summary: Optional[str]
+
 class MemberListResponseSchema(Schema):
-    members: List[UserSchema]
+    members: List[MemberInfoSchema]
+    
+    

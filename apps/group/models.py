@@ -31,3 +31,16 @@ class UserGroupMembership(models.Model):
     class Meta:
         db_table = 'user_group_memberships'  # 원하는 테이블명
         unique_together = ('group', 'user')  # 중복 가입 방지
+        
+        
+class MVPVote(models.Model):
+    group = models.ForeignKey(GroupInfo, on_delete=models.CASCADE)
+    voter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="mvp_votes_cast")
+    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name="mvp_votes_received")
+    vote_date = models.DateField()  # 하루 단위 투표
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'mvp_votes'
+        unique_together = ('group', 'voter', 'vote_date')  # 같은 날, 같은 그룹에서 중복투표 불가

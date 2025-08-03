@@ -10,7 +10,7 @@ from apps.usage.api.schemas import (
     UsageListResponseSchema,
     SimpleResponseSchema,
 )
-from apps.usage.models import UsageRecord
+from apps.usage.models import UsageRecord, AppInfo
 
 router = Router(tags=["Usage"])
 
@@ -18,10 +18,14 @@ router = Router(tags=["Usage"])
 def record_usage(request, data: UsageRecordCreateSchema):
     user = request.user
     try:
+        app, _ = AppInfo.objects.get_or_create(
+            package_name=data.package_name,
+            defaults={"app_name: data.app_name"}
+        )
+
         UsageRecord.objects.create(
             user=user,
-            package_name=data.package_name,
-            app_name=data.app_name,
+            app = app,
             usage_time_ms=data.usage_time_ms,
             start_time=data.start_time,
             end_time=data.end_time,

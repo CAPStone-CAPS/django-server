@@ -2,6 +2,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.models import User
 from django.http import HttpRequest
 from ninja.security import HttpBearer
+from ninja.errors import HttpError
 
 class JWTAuthHandler:
     def __init__(self):
@@ -14,7 +15,10 @@ class JWTAuthHandler:
             request.user = user
             return user
         except Exception:
-            return None
+            raise HttpError(
+                status_code=401, 
+                message="유효하지 않은 토큰입니다. 다시 로그인 해주세요."
+            )
 
     def get_user_info(self, token: str) -> dict | None:
         try:
@@ -25,7 +29,10 @@ class JWTAuthHandler:
                 "username": payload.get("username"),
             }
         except Exception:
-            return None
+            raise HttpError(
+                status_code=401, 
+                message="유효하지 않은 토큰입니다. 다시 로그인 해주세요."
+            )
 
 class JWTAuth(HttpBearer):
     def authenticate(self, request: HttpRequest, token: str):
