@@ -15,6 +15,8 @@ from apps.usage.api.schemas import (
     UsageRecordCreateSchema,
     UsageRecordSchema,
     UsageListResponseSchema,
+    MemoSchema,
+    MemoResponseSchema,
 )
 from apps.usage.models import UsageRecord, AppInfo
 
@@ -28,7 +30,7 @@ COMMON_ERROR_RESPONSES = {
 }
 
 
-@router.post("/usage/record", response={
+@router.post("/record", response={
     200: ResponseSchema[None],
     **COMMON_ERROR_RESPONSES,
 })
@@ -41,7 +43,7 @@ def record_usage(request, data: UsageRecordCreateSchema):
             defaults={"app_name": data.app_name}
         )
 
-        UsageRecord.objects.create(
+        record = UsageRecord.objects.create(
             user=user,
             app=app,
             usage_time_ms=data.usage_time_ms,
@@ -50,7 +52,11 @@ def record_usage(request, data: UsageRecordCreateSchema):
         )
 
         return Response(
-            {"message": "사용시간 기록 성공", "data": None},
+            {"message": "사용시간 기록 성공",
+             "data": {
+                 "record_id": record.id
+                }
+             },
             status=200
         )
 
@@ -67,7 +73,7 @@ def record_usage(request, data: UsageRecordCreateSchema):
         )
 
 
-@router.get("/usage/list", response={
+@router.get("/list", response={
     200: ResponseSchema[UsageListResponseSchema],
     **COMMON_ERROR_RESPONSES,
 })
@@ -82,6 +88,7 @@ def list_usage(request):
         usage_time_str = str(timedelta(milliseconds=r.usage_time_ms))
 
         record = UsageRecordSchema(
+            id=r.id,
             package_name=r.app.package_name,
             app_name=r.app.app_name,
             usage_time_ms=r.usage_time_ms,
@@ -100,3 +107,57 @@ def list_usage(request):
         },
         status=200
     )
+
+
+@router.post("/{record_id}/memo", response={
+    200: ResponseSchema[MemoResponseSchema],
+    **COMMON_ERROR_RESPONSES,
+})
+def set_usage_memo(request, record_id: int, payload: MemoSchema):
+    try:
+        record = UsageRecord.objects.get(id=record_id, user=request.user)
+    except UsageRecord.DoesNotExist:
+        return Response({"message": "사용 기록을 찾을 수 없습니다", "data": None}, status=404)
+
+    record.memo = payload.memo
+    record.save()
+
+    return Response({
+        "message": "메모 등록/수정 완료",
+        "data": {"id": record.id, "memo": record.memo}
+    }, status=200)
+
+
+@router.get("/{record_id}/memo", response={
+    200: ResponseSchema[MemoResponseSchema],
+    **COMMON_ERROR_RESPONSES,
+})
+def get_usage_memo(request, record_id: int):
+    try:
+        record = UsageRecord.objects.get(id=record_id, user=request.user)
+    except UsageRecord.DoesNotExist:
+        return Response({"message": "사용 기록을 찾을 수 없습니다", "data": None}, status=404)
+
+    return Response({
+        "message": "메모 조회 성공",
+        "data": {"id": record.id, "memo": record.memo}
+    }, status=200)
+
+
+@router.delete("/{record_id}/memo", response={
+    200: ResponseSchema[MemoResponseSchema],
+    **COMMON_ERROR_RESPONSES,
+})
+def delete_usage_memo(request, record_id: int):
+    try:
+        record = UsageRecord.objects.get(id=record_id, user=request.user)
+    except UsageRecord.DoesNotExist:
+        return Response({"message": "사용 기록을 찾을 수 없습니다", "data": None}, status=404)
+
+    record.memo = None
+    record.save()
+
+    return Response({
+        "message": "메모 삭제 완료",
+        "data": {"id": record.id, "memo": None}
+    }, status=200)

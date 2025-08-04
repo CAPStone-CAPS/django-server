@@ -9,6 +9,7 @@ class UsageRecordCreateSchema(BaseModel):
     end_time: int = Field(..., example=1753888371658)
 
 class UsageRecordSchema(BaseModel):
+    id: Optional[int] = None
     package_name: str
     app_name: str
     usage_time_ms: int
@@ -24,3 +25,11 @@ class UsageListResponseSchema(BaseModel):
 class SimpleResponseSchema(BaseModel):
     message: str
     data: Optional[dict] = None
+
+# 메모 관련 스키마
+class MemoSchema(BaseModel):
+    memo: Optional[str] = Field(None, description="메모 내용")
+
+class MemoResponseSchema(BaseModel):
+    id: int
+    memo: Optional[str] = None
