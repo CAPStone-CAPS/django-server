@@ -1,3 +1,7 @@
+from typing import Optional
+from datetime import date, timedelta, datetime
+
+from ninja import Query
 from datetime import datetime, timedelta
 
 from ninja import Router
@@ -77,9 +81,27 @@ def record_usage(request, data: UsageRecordCreateSchema):
     200: ResponseSchema[UsageListResponseSchema],
     **COMMON_ERROR_RESPONSES,
 })
-def list_usage(request):
+def list_usage(request, date: Optional[date] = Query(None)):
     user = request.user
-    records = UsageRecord.objects.select_related("app").filter(user=user).order_by("-start_time")
+    target_date = date or datetime.today().date()  # ✅ 이미 date 타입이므로 바로 사용 가능
+
+    if date:
+        # 날짜 범위 (하루의 시작과 끝) → 밀리초 단위
+        start_of_day = int(datetime.combine(target_date, datetime.min.time()).timestamp() * 1000)
+        end_of_day = int(datetime.combine(target_date, datetime.max.time()).timestamp() * 1000)
+
+        # 해당 날짜와 겹치는 기록 조회 (start_time이나 end_time이 하루에 겹치는 경우)
+        records = UsageRecord.objects.select_related("app").filter(
+            user=user,
+            end_time__gte=start_of_day,
+            start_time__lte=end_of_day,
+        ).order_by("-start_time")
+    else:
+        # 날짜가 없을 경우 → 전체 기록 조회
+        records = UsageRecord.objects.select_related("app").filter(
+            user=user
+        ).order_by("-start_time")
+
 
     result = []
     for r in records:
