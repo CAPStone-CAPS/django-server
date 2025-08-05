@@ -13,6 +13,7 @@ class StandardResponse(BaseModel, Generic[T]):
 class UserResponse(BaseModel):
     id: int
     username: str
+    profile_image_url: Optional[str] = None
 
 class SignupSchema(BaseModel):
     username: str
@@ -35,4 +36,4 @@ class TokenResponse(Schema):
  
     
 class UploadProfileResponse(Schema):
-    image_url: str
+    profile_image_url: str

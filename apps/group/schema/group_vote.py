@@ -6,10 +6,6 @@ from pydantic import Field
 from .group import UserSchema, MemberInfoSchema
 
 
-class MemberInfoSchema(Schema):
-    user: UserSchema
-    summary: Optional[str]
-
 class MVPVoteInfoResponse(Schema):
     today_voted: bool
     candidates: List[MemberInfoSchema]

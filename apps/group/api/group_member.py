@@ -6,6 +6,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 
 from ..models import GroupInfo, UserGroupMembership
+from apps.users.models import Profile
 from apps.summary.models import AIDailySummary
 from apps.api.schema import (
     ResponseSchema,
@@ -56,13 +57,26 @@ def get_group_members(request: HttpRequest, group_id: int):
     summaries = AIDailySummary.objects.filter(user_id__in=user_ids, date=today)
     summary_map = {s.user_id: s.summary for s in summaries}
 
-    results = [
-        MemberInfoSchema(
-            user=user_map[uid],
-            summary=summary_map.get(uid, "요약이 없습니다.")
+    profiles = Profile.objects.filter(user_id__in=user_ids)
+    profile_map = {p.user_id: p for p in profiles}
+
+    for p in profiles:
+        print(p.user_id, p.profile_image.name, p.profile_image.url if p.profile_image else "No Image")
+
+    results = []
+    for uid in user_ids:
+        user = user_map[uid]
+        summary = summary_map.get(uid, "요약이 없습니다.")
+        profile = profile_map[uid]
+        profile_image_url = profile.profile_image.url if profile.profile_image else None
+    
+        results.append(
+            MemberInfoSchema(
+                user=user,
+                summary=summary,
+                profile_image_url=profile_image_url
+            )
         )
-        for uid in user_ids
-    ]
     
     return 200, ResponseSchema(
         message="그룹 멤버 목록",

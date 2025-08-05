@@ -68,21 +68,38 @@ def login(request, data: LoginSchema):
 
 @router.get("/me", auth=JWTAuth(), response=ResponseSchema[UserResponse])
 def me(request):
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    
     return Response(
         {
             "message": "회원 정보 조회 성공",
             "data": {
                 "id": request.user.id,
                 "username": request.user.username,
+                "profile_image_url": profile.profile_image.url if profile.profile_image else None
             }
         },
         status=200
     )
 
 
-@router.patch("/me", auth=JWTAuth(), response=ResponseSchema[UserResponse])
+@router.patch(
+    "/me", 
+    auth=JWTAuth(), 
+    response=ResponseSchema[UserResponse],
+    description="""
+회원 정보 수정 엔드포인트입니다.
+- 인증된 사용자만 접근할 수 있습니다.
+- `username`과 `password` 중 하나 또는 둘 다 수정할 수 있습니다.
+- `username`은 고유해야 하며, 이미 존재하는 경우 400 오류를 반환합니다.
+- 성공 시 수정된 사용자 정보를 반환합니다.
+- `profile_image_url`은 프로필 이미지 URL을 포함합니다.
+- 프로필 이미지 수정은 별도의 엔드포인트로 처리합니다.
+"""
+)
 def update_user(request, data: UpdateUserSchema):
     user = request.user
+    profile, _ = Profile.objects.get_or_create(user=user)
 
     if data.username:
         if User.objects.exclude(id=user.id).filter(username=data.username).exists():
@@ -103,6 +120,7 @@ def update_user(request, data: UpdateUserSchema):
             "data": {
                 "id": user.id,
                 "username": user.username,
+                "profile_image_url": profile.profile_image.url if profile.profile_image else None
             }
         },
         status=200
@@ -111,6 +129,7 @@ def update_user(request, data: UpdateUserSchema):
     
 @router.post(
     "/upload-profile-image", 
+    auth=JWTAuth(),
     response={
         200: ResponseSchema[UploadProfileResponse],
         400: BadRequestSchema,
@@ -153,10 +172,11 @@ def upload_profile_image(request, file: File[UploadedFile]):
         
     profile.profile_image.save(file.name, file, save=True)
     profile.save()
+    profile.refresh_from_db()  
 
     return ResponseSchema(
         message="프로필 이미지 업로드 성공",
         data=UploadProfileResponse(
-            image_url=profile.profile_image.url
+            profile_image_url=profile.profile_image.url
         )
     )

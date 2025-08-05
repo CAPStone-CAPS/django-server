@@ -37,7 +37,8 @@ class UserSchema(Schema):
 
 class MemberInfoSchema(Schema):
     user: UserSchema
-    summary: Optional[str]
+    summary: str
+    profile_image_url: Optional[str] = None
 
 class MemberListResponseSchema(Schema):
     members: List[MemberInfoSchema]

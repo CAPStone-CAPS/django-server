@@ -61,7 +61,8 @@ def get_vote_info(request: HttpRequest, group_id: int):
     candidates = [
         MemberInfoSchema(
             user=m.user,
-            summary=summary_map.get(m.user.id) or "요약이 없습니다."
+            summary=summary_map.get(m.user.id) or "요약이 없습니다.",
+            profile_image_url=m.user.profile.profile_image.url if m.user.profile and m.user.profile.profile_image else None
         )
         for m in member_qs
     ]
@@ -140,7 +141,8 @@ def get_vote_result(request: HttpRequest, group_id: int):
         MVPResultItem(
             candidate=MemberInfoSchema(
                 user=user_map[uid],
-                summary=summary_map.get(uid, "요약이 없습니다.")
+                summary=summary_map.get(uid, "요약이 없습니다."),
+                profile_image_url=user_map[uid].profile.profile_image.url if user_map[uid].profile and user_map[uid].profile.profile_image else None
             ),
             vote_count=vote_count_map.get(uid, 0)
         )
