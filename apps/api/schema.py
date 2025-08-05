@@ -12,6 +12,11 @@ class ResponseSchema(GenericModel, Generic[T]):
     data: Optional[T] = None
 
 
+class BadRequestSchema(Schema):
+    message: str = "Bad Request"
+    data: Optional[None] = None
+
+
 class UnauthorizedSchema(Schema):
     message: str = "Unauthorized"
     data: Optional[None] = None

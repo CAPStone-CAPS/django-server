@@ -14,3 +14,6 @@ wheels/
 db.sqlite3
 .env
 .env.github
+
+# Media files
+media/profile_images/

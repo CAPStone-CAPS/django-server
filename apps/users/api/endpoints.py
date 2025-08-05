@@ -1,12 +1,31 @@
-from ninja import Router
+import os
+import magic
+
+from ninja import Router, File
+from ninja.files import UploadedFile
 from ninja.responses import Response
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.api.schema import ResponseSchema
+from apps.api.schema import (
+    ResponseSchema,
+    BadRequestSchema,
+    UnauthorizedSchema,
+    ForbiddenSchema,
+    NotFoundSchema
+)
 from apps.api.auth import JWTAuth
-from .schemas import SignupSchema, LoginSchema, UpdateUserSchema, UserResponse, SignupResponse, TokenResponse
+from .schemas import (
+    SignupSchema,
+    LoginSchema,
+    UpdateUserSchema,
+    UserResponse,
+    SignupResponse,
+    TokenResponse,
+    UploadProfileResponse
+)
+from ..models import Profile
 
 router = Router(tags=["회원 계정 관련 API"])
 
@@ -73,29 +92,40 @@ def login(request, data: LoginSchema):
     response=ResponseSchema[UserResponse])
 
 def me(request):
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    
     return Response(
         {
             "message": "회원 정보 조회 성공",
             "data": {
                 "id": request.user.id,
                 "username": request.user.username,
+                "profile_image_url": profile.profile_image.url if profile.profile_image else None
             }
         },
         status=200
     )
 
 
-@router.patch("/me", auth=JWTAuth(),
+@router.patch(
+    "/me", 
+    auth=JWTAuth(), 
+    response=ResponseSchema[UserResponse],
     summary="정보 수정 API",
     description="""
-    정보 수정을 위한 API입니다.
-    
-    - 변경하고자 하는 username과 password를 JSON 문자열로 포함해야 합니다.
-    """,
-
-    response=ResponseSchema[UserResponse])
+회원 정보 수정 엔드포인트입니다.
+- 변경하고자 하는 `username`과 `password`를 JSON 문자열로 포함해야 합니다.
+- 인증된 사용자만 접근할 수 있습니다.
+- `username`과 `password` 중 하나 또는 둘 다 수정할 수 있습니다.
+- `username`은 고유해야 하며, 이미 존재하는 경우 400 오류를 반환합니다.
+- 성공 시 수정된 사용자 정보를 반환합니다.
+- `profile_image_url`은 프로필 이미지 URL을 포함합니다.
+- 프로필 이미지 수정은 별도의 엔드포인트로 처리합니다.
+"""
+)
 def update_user(request, data: UpdateUserSchema):
     user = request.user
+    profile, _ = Profile.objects.get_or_create(user=user)
 
     if data.username:
         if User.objects.exclude(id=user.id).filter(username=data.username).exists():
@@ -116,7 +146,63 @@ def update_user(request, data: UpdateUserSchema):
             "data": {
                 "id": user.id,
                 "username": user.username,
+                "profile_image_url": profile.profile_image.url if profile.profile_image else None
             }
         },
         status=200
+    )
+    
+    
+@router.post(
+    "/upload-profile-image", 
+    auth=JWTAuth(),
+    response={
+        200: ResponseSchema[UploadProfileResponse],
+        400: BadRequestSchema,
+        401: UnauthorizedSchema,
+    },
+    description="""
+프로필 이미지 업로드 엔드포인트입니다.
+- 인증된 사용자만 접근할 수 있습니다.
+- 업로드된 이미지는 사용자 프로필에 저장됩니다.
+- 요청 본문에 `file` 필드로 이미지를 포함해야 합니다.
+- 성공 시 이미지 URL을 반환합니다.
+- 프로필 수정을 원하면 다시 여기로 요청하면 됩니다.
+"""
+)
+def upload_profile_image(request, file: File[UploadedFile]):
+    ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
+    MAX_SIZE_MB = 5
+    
+    ext = os.path.splitext(file.name)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return 400, {"message": "지원하지 않는 이미지 형식입니다."}
+    
+    
+    if file.size > MAX_SIZE_MB * 1024 * 1024:
+        return 400, {"message": f"{MAX_SIZE_MB}MB 이하의 이미지만 업로드할 수 있습니다."}
+    
+    # MIME 타입 검사
+    mime = magic.from_buffer(file.file.read(1024), mime=True)
+    file.file.seek(0)  # 읽은 뒤 포인터 초기화
+    if not mime.startswith("image/"):
+        return 400, {"message": "이미지 파일만 업로드할 수 있습니다."}
+    
+    user = request.user
+    if not user.is_authenticated:
+        return 401, {"message": "인증되지 않은 사용자입니다."}
+    
+    profile, _ = Profile.objects.get_or_create(user=user)
+    if profile.profile_image:
+        profile.profile_image.delete(save=False)
+        
+    profile.profile_image.save(file.name, file, save=True)
+    profile.save()
+    profile.refresh_from_db()  
+
+    return ResponseSchema(
+        message="프로필 이미지 업로드 성공",
+        data=UploadProfileResponse(
+            profile_image_url=profile.profile_image.url
+        )
     )
