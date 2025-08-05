@@ -27,10 +27,18 @@ from .schemas import (
 )
 from ..models import Profile
 
-router = Router(tags=["Login"])
+router = Router(tags=["회원 계정 관련 API"])
 
 
-@router.post("/signup", response=ResponseSchema[SignupResponse])
+@router.post("/signup",
+    summary="회원가입 API",
+    description="""
+    회원가입을 위한 API입니다.
+    
+    - username과 password를 JSON 문자열로 포함해야 합니다.
+    """,
+    response=ResponseSchema[SignupResponse])
+
 def signup(request, data: SignupSchema):
     if User.objects.filter(username=data.username).exists():
         return Response(
@@ -44,7 +52,15 @@ def signup(request, data: SignupSchema):
     )
 
 
-@router.post("/login", response=ResponseSchema[TokenResponse])
+@router.post("/login",
+    summary="로그인 API",
+    description="""
+    로그인을 위한 API입니다.
+    
+    - username과 password를 JSON 문자열로 포함해야 합니다.
+    - 응답으로 JWT 토큰이 발급됩니다. 헤더에 담아서 인가에 사용하세요.
+    """,
+    response=ResponseSchema[TokenResponse])
 def login(request, data: LoginSchema):
     user = authenticate(username=data.username, password=data.password)
     if user is None:
@@ -66,7 +82,15 @@ def login(request, data: LoginSchema):
     )
 
 
-@router.get("/me", auth=JWTAuth(), response=ResponseSchema[UserResponse])
+@router.get("/me", auth=JWTAuth(),
+    summary="본인 정보 확인 API",
+    description="""
+    본인 정보 확인을 위한 API입니다.
+    
+    - 결과값으로 user_id와 username을 반환합니다.
+    """,
+    response=ResponseSchema[UserResponse])
+
 def me(request):
     profile, _ = Profile.objects.get_or_create(user=request.user)
     
@@ -87,8 +111,10 @@ def me(request):
     "/me", 
     auth=JWTAuth(), 
     response=ResponseSchema[UserResponse],
+    summary="정보 수정 API",
     description="""
 회원 정보 수정 엔드포인트입니다.
+- 변경하고자 하는 `username`과 `password`를 JSON 문자열로 포함해야 합니다.
 - 인증된 사용자만 접근할 수 있습니다.
 - `username`과 `password` 중 하나 또는 둘 다 수정할 수 있습니다.
 - `username`은 고유해야 하며, 이미 존재하는 경우 400 오류를 반환합니다.
