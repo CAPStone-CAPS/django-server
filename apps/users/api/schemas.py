@@ -32,3 +32,7 @@ class SignupResponse(Schema):
 class TokenResponse(Schema):
     accessToken: str
     refresh: str
+ 
+    
+class UploadProfileResponse(Schema):
+    image_url: str
