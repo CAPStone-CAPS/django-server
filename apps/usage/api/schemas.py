@@ -1,5 +1,7 @@
+from ninja import Schema
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from datetime import date
 
 class UsageRecordCreateSchema(BaseModel):
     package_name: str = Field(..., example="com.example.capstone_2")
@@ -9,6 +11,7 @@ class UsageRecordCreateSchema(BaseModel):
     end_time: int = Field(..., example=1753888371658)
 
 class UsageRecordSchema(BaseModel):
+    id: Optional[int] = None
     package_name: str
     app_name: str
     usage_time_ms: int
@@ -24,3 +27,14 @@ class UsageListResponseSchema(BaseModel):
 class SimpleResponseSchema(BaseModel):
     message: str
     data: Optional[dict] = None
+
+class UsageListQuerySchema(Schema):
+    date: Optional[date] = None  # YYYY-MM-DD 형태로 받는 하루 단위 날짜
+
+# 메모 관련 스키마
+class MemoSchema(BaseModel):
+    memo: Optional[str] = Field(None, description="메모 내용")
+
+class MemoResponseSchema(BaseModel):
+    id: int
+    memo: Optional[str] = None

@@ -8,10 +8,18 @@ from apps.api.schema import ResponseSchema
 from apps.api.auth import JWTAuth
 from .schemas import SignupSchema, LoginSchema, UpdateUserSchema, UserResponse, SignupResponse, TokenResponse
 
-router = Router(tags=["Login"])
+router = Router(tags=["회원 계정 관련 API"])
 
 
-@router.post("/signup", response=ResponseSchema[SignupResponse])
+@router.post("/signup",
+    summary="회원가입 API",
+    description="""
+    회원가입을 위한 API입니다.
+    
+    - username과 password를 JSON 문자열로 포함해야 합니다.
+    """,
+    response=ResponseSchema[SignupResponse])
+
 def signup(request, data: SignupSchema):
     if User.objects.filter(username=data.username).exists():
         return Response(
@@ -25,7 +33,15 @@ def signup(request, data: SignupSchema):
     )
 
 
-@router.post("/login", response=ResponseSchema[TokenResponse])
+@router.post("/login",
+    summary="로그인 API",
+    description="""
+    로그인을 위한 API입니다.
+    
+    - username과 password를 JSON 문자열로 포함해야 합니다.
+    - 응답으로 JWT 토큰이 발급됩니다. 헤더에 담아서 인가에 사용하세요.
+    """,
+    response=ResponseSchema[TokenResponse])
 def login(request, data: LoginSchema):
     user = authenticate(username=data.username, password=data.password)
     if user is None:
@@ -47,7 +63,15 @@ def login(request, data: LoginSchema):
     )
 
 
-@router.get("/me", auth=JWTAuth(), response=ResponseSchema[UserResponse])
+@router.get("/me", auth=JWTAuth(),
+    summary="본인 정보 확인 API",
+    description="""
+    본인 정보 확인을 위한 API입니다.
+    
+    - 결과값으로 user_id와 username을 반환합니다.
+    """,
+    response=ResponseSchema[UserResponse])
+
 def me(request):
     return Response(
         {
@@ -61,7 +85,15 @@ def me(request):
     )
 
 
-@router.patch("/me", auth=JWTAuth(), response=ResponseSchema[UserResponse])
+@router.patch("/me", auth=JWTAuth(),
+    summary="정보 수정 API",
+    description="""
+    정보 수정을 위한 API입니다.
+    
+    - 변경하고자 하는 username과 password를 JSON 문자열로 포함해야 합니다.
+    """,
+
+    response=ResponseSchema[UserResponse])
 def update_user(request, data: UpdateUserSchema):
     user = request.user
 
