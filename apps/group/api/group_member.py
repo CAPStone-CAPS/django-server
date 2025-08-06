@@ -66,10 +66,13 @@ def get_group_members(request: HttpRequest, group_id: int):
     results = []
     for uid in user_ids:
         user = user_map[uid]
+        if not user:
+            continue
+        
         summary = summary_map.get(uid, "요약이 없습니다.")
-        profile = profile_map[uid]
-        profile_image_url = profile.profile_image.url if profile.profile_image else None
-    
+        profile = profile_map.get(uid)
+        profile_image_url = profile.profile_image.url if profile and profile.profile_image else None
+
         results.append(
             MemberInfoSchema(
                 user=user,
