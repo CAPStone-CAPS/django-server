@@ -1,12 +1,12 @@
 from ninja import Schema
-from typing import Optional, Generic, TypeVar, Literal
-from pydantic.generics import GenericModel
+from typing import Optional, Generic, TypeVar
+from pydantic import BaseModel
 
 
 T = TypeVar("T")
 
 # API 응답을 위한 공통 기본 스키마
-class ResponseSchema(GenericModel, Generic[T]):
+class ResponseSchema(BaseModel, Generic[T]):
     # status: int
     message: str
     data: Optional[T] = None

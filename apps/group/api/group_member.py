@@ -14,7 +14,13 @@ from apps.api.schema import (
     ForbiddenSchema,
     NotFoundSchema
 )
-from ..schema import UserSchema, MemberListResponseSchema, MemberInfoSchema
+from ..schema import (
+    UserSchema, 
+    MemberListResponseSchema,
+    MemberInfoSchema, 
+    AddMemberSchema,
+    RemoveMemberSchema
+)
 from apps.api.auth import JWTAuth
 
 
@@ -22,12 +28,15 @@ router = Router(tags=["Group Member"], auth=JWTAuth())
 
 
 # 그룹 멤버 리스트 조회
-@router.get("/{group_id}/members", response={
-    200: ResponseSchema[MemberListResponseSchema],
-    401: UnauthorizedSchema,
-    403: ForbiddenSchema,
-    404: NotFoundSchema
-})
+@router.get("/{group_id}/members", 
+    summary="그룹 멤버 목록 조회",
+    response={
+        200: ResponseSchema[MemberListResponseSchema],
+        401: UnauthorizedSchema,
+        403: ForbiddenSchema,
+        404: NotFoundSchema
+    }
+)
 def get_group_members(request: HttpRequest, group_id: int):
     """
     그룹의 멤버 목록과 각 멤버의 오늘자 AI 요약을 확인할 수 있습니다.
@@ -90,12 +99,15 @@ def get_group_members(request: HttpRequest, group_id: int):
 
 
 # 그룹에 멤버 추가
-@router.post("/{group_id}/members/{user_id}", response={
-    201: ResponseSchema[UserSchema],
-    401: UnauthorizedSchema,
-    403: ForbiddenSchema,
-    404: NotFoundSchema
-})
+@router.post("/{group_id}/members/{user_id}", 
+    summary="그룹에 멤버를 user_id로 추가",
+    response={
+        201: ResponseSchema[UserSchema],
+        401: UnauthorizedSchema,
+        403: ForbiddenSchema,
+        404: NotFoundSchema
+    }
+)
 def add_member_to_group(request: HttpRequest, group_id: int, user_id: int):
     if not request.user.is_authenticated:
         return Response(
@@ -139,12 +151,15 @@ def add_member_to_group(request: HttpRequest, group_id: int, user_id: int):
 
 
 # 그룹에서 멤버 삭제
-@router.delete("/{group_id}/members/{user_id}", response={
-    200: ResponseSchema[None],
-    401: UnauthorizedSchema,
-    403: ForbiddenSchema,
-    404: NotFoundSchema
-})
+@router.delete("/{group_id}/members/{user_id}",
+    summary="그룹에서 멤버를 user_id로 삭제",
+    response={
+        200: ResponseSchema[None],
+        401: UnauthorizedSchema,
+        403: ForbiddenSchema,
+        404: NotFoundSchema
+    }
+)
 def remove_member_from_group(request: HttpRequest, group_id: int, user_id: int):
     if not request.user.is_authenticated:
         return Response(
@@ -165,6 +180,81 @@ def remove_member_from_group(request: HttpRequest, group_id: int, user_id: int):
             {"message": "Membership not found", "data": None},
             status=404
         )
+
+    membership.delete()
+    return Response({
+        "message": "Member removed successfully",
+        "data": None
+    }, status=200)
+    
+    
+    
+"""
+그룹 멤버 추가 / 삭제를 username으로 처리하는 API
+"""
+
+@router.post("/{group_id}/members/", 
+    summary="그룹에 멤버를 username으로 추가",
+    response={
+        201: ResponseSchema[UserSchema],
+        400: ResponseSchema[None],
+        401: UnauthorizedSchema,
+        403: ForbiddenSchema,
+        404: NotFoundSchema
+    }
+)
+def add_member_by_username(request: HttpRequest, group_id: int, body: AddMemberSchema):
+    if not request.user.is_authenticated:
+        return Response({"message": "Unauthorized", "data": None}, status=401)
+
+    if not UserGroupMembership.objects.filter(user=request.user, group_id=group_id).exists():
+        return Response({"message": "Forbidden: Not a group member", "data": None}, status=403)
+
+    try:
+        group = GroupInfo.objects.get(id=group_id)
+    except GroupInfo.DoesNotExist:
+        return Response({"message": "Group not found", "data": None}, status=404)
+
+    try:
+        user = User.objects.get(username=body.username)
+    except User.DoesNotExist:
+        return Response({"message": "User not found", "data": None}, status=404)
+
+    membership, created = UserGroupMembership.objects.get_or_create(user=user, group=group)
+    if not created:
+        return Response({"message": "User already a member of the group", "data": None}, status=400)
+
+    return Response({
+        "message": "User added to group",
+        "data": UserSchema.from_orm(user)
+    }, status=201)
+
+
+@router.delete("/{group_id}/members/",
+    summary="그룹에서 멤버를 username으로 삭제",
+    response={
+        200: ResponseSchema[None],
+        401: UnauthorizedSchema,
+        403: ForbiddenSchema,
+        404: NotFoundSchema
+    }
+)
+def remove_member_by_username(request: HttpRequest, group_id: int, body: RemoveMemberSchema):
+    if not request.user.is_authenticated:
+        return Response({"message": "Unauthorized", "data": None}, status=401)
+
+    if not UserGroupMembership.objects.filter(user=request.user, group_id=group_id).exists():
+        return Response({"message": "Forbidden: Not a group member", "data": None}, status=403)
+
+    try:
+        user = User.objects.get(username=body.username)
+    except User.DoesNotExist:
+        return Response({"message": "User not found", "data": None}, status=404)
+
+    try:
+        membership = UserGroupMembership.objects.get(user=user, group_id=group_id)
+    except UserGroupMembership.DoesNotExist:
+        return Response({"message": "Membership not found", "data": None}, status=404)
 
     membership.delete()
     return Response({

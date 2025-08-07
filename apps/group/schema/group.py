@@ -10,8 +10,9 @@ class GroupSchema(Schema):
     create_date: datetime
     modify_date: Optional[datetime]
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 
 class GroupCreateRequestSchema(Schema):
@@ -32,15 +33,23 @@ class UserSchema(Schema):
     id: int
     username: str
 
-    class Config:
-        orm_mode = True
+    model_config = {
+        "from_attributes": True
+    }
 
 class MemberInfoSchema(Schema):
     user: UserSchema
     summary: str
     profile_image_url: Optional[str] = None
 
+
 class MemberListResponseSchema(Schema):
     members: List[MemberInfoSchema]
     
     
+class AddMemberSchema(Schema):
+    username: str
+    
+    
+class RemoveMemberSchema(Schema):
+    username: str
