@@ -1,24 +1,28 @@
 import json
 import re
+import datetime
 import os
 from dotenv import load_dotenv
 
+from django.contrib.auth.models import User
+
 from google import genai
 from google.genai import types
+from apps.usage.models import UsageRecord
 
 
 load_dotenv()
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-user_data = """
-YouTube - 2시간 30분 (쉬는 시간에 봄. 너무 오래 본 것 같음)
-Instagram - 1시간 (별로 할 일 없을 때 켰음)
-Notion - 40분 (강의 노트 정리)
-Chrome - 1시간 10분 (과제 관련 자료 조사)
-게임 - 1시간 (스트레스 풀려고 함)
-"""
+# user_data = """
+# YouTube - 2시간 30분 (쉬는 시간에 봄. 너무 오래 본 것 같음)
+# Instagram - 1시간 (별로 할 일 없을 때 켰음)
+# Notion - 40분 (강의 노트 정리)
+# Chrome - 1시간 10분 (과제 관련 자료 조사)
+# 게임 - 1시간 (스트레스 풀려고 함)
+# """
 
-prompt = f"""
+PROMPT_TEMPLATE = """
 당신은 사용자의 스마트폰 사용 습관을 분석하는 요약 및 피드백 전문가입니다.
 
 다음은 사용자의 하루 스마트폰 사용 기록입니다. 각 항목은 사용한 앱 이름, 사용 시간, 그리고 사용자가 직접 남긴 간단한 메모로 구성되어 있습니다.
@@ -59,6 +63,10 @@ prompt = f"""
 """
 
 
+def prompt(user_data: str) -> str:
+    return PROMPT_TEMPLATE.format(user_data=user_data)
+
+
 def extract_json(text: str) -> dict:
     # ```json ... ``` 또는 ``` ... ``` 안의 JSON만 추출
     match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
@@ -76,13 +84,38 @@ def extract_json(text: str) -> dict:
         return None
     
 
-def generate_summary() -> str: 
+def generate_summary(user: User, target_date: datetime.date) -> tuple[bool, str]: 
+    start_of_day = datetime.datetime.combine(target_date, datetime.time.min)
+    end_of_day = datetime.datetime.combine(target_date, datetime.time.max)
+    
+    records = UsageRecord.objects.filter(
+        user=user,
+        created_at__range=(start_of_day, end_of_day)
+    ).select_related('app').order_by('start_time')
+    
+    if not records.exists():
+        return False, f"{target_date}에는 사용 기록이 없습니다."
+
+    # 앱 이름 + 사용 시간 + 메모 기반으로 텍스트 생성
+    record_lines = []
+    for record in records:
+        app_name = record.app.app_name if record.app else "알 수 없음"
+        usage_minutes = round((record.usage_time_ms or 0) / 1000 / 60)
+        memo = record.memo.strip() if record.memo else ""
+
+        line = f"{app_name} - {usage_minutes}분"
+        if memo:
+            line += f" ({memo})"
+        record_lines.append(line)
+
+    user_data_text = "\n".join(record_lines)
+    
     response = client.models.generate_content(
         model="gemini-2.5-flash",
-        contents=prompt,
+        contents=prompt(user_data_text),
         config=types.GenerateContentConfig(
             thinking_config=types.ThinkingConfig(thinking_budget=0)
         ),
     )
     data = extract_json(response.text)
-    return data["summary"] + " " + data["feedback"]
+    return True, f"{data['summary']} {data['feedback']}"
