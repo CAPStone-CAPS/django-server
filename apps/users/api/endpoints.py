@@ -37,7 +37,7 @@ router = Router(tags=["회원 계정 관련 API"])
     
     - username과 password를 JSON 문자열로 포함해야 합니다.
     """,
-    response=ResponseSchema[SignupResponse])
+    response={ 201: ResponseSchema[SignupResponse], 400: BadRequestSchema })
 
 def signup(request, data: SignupSchema):
     if User.objects.filter(username=data.username).exists():
@@ -60,7 +60,12 @@ def signup(request, data: SignupSchema):
     - username과 password를 JSON 문자열로 포함해야 합니다.
     - 응답으로 JWT 토큰이 발급됩니다. 헤더에 담아서 인가에 사용하세요.
     """,
-    response=ResponseSchema[TokenResponse])
+    response={
+        200: ResponseSchema[TokenResponse], 
+        400: BadRequestSchema, 
+        401: UnauthorizedSchema
+    }
+)
 def login(request, data: LoginSchema):
     user = authenticate(username=data.username, password=data.password)
     if user is None:
