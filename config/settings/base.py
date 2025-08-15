@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import logfire
 
 load_dotenv()
 
@@ -159,3 +160,22 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+
+
+LOGGING = {  
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'logfire': {
+            'class': 'logfire.LogfireLoggingHandler',
+        },
+    },
+    'root': {
+        'handlers': ['logfire'],
+    },
+}
+
+# Add the following lines at the end of the file
+logfire.configure()
+logfire.instrument_django()
+logfire.instrument_sqlite3()
