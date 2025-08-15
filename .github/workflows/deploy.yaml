@@ -50,6 +50,7 @@ jobs:
           echo "DJANGO_SUPERUSER_EMAIL=${{ secrets.ENV_DJANGO_SUPERUSER_EMAIL }}" >> .env
           echo "DJANGO_SUPERUSER_PASSWORD=${{ secrets.ENV_DJANGO_SUPERUSER_PASSWORD }}" >> .env
           echo "GEMINI_API_KEY=${{ secrets.ENV_GEMINI_API_KEY }}" >> .env
+          echo "LOGFIRE_TOKEN=${{ secrets.ENV_LOGFIRE_TOKEN }}" >> .env
 
       - name: Set up SSH key
         uses: webfactory/ssh-agent@v0.9.0
